@@ -2,61 +2,79 @@ local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 
+local function stopAllAnimations()
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+    if animator then
+        for _, track in pairs(animator:GetPlayingAnimationTracks()) do
+            track:Stop()
+        end
+    end
+end
+stopAllAnimations()
+
 local idleAnimId = "rbxassetid://96173779255396"
 local walkAnimId = "rbxassetid://96194626828153"
 local runAnimId = "rbxassetid://96194626828153"
-local m1AnimIds = {
-    "rbxassetid://88258635004597",
-    "rbxassetid://70589254357640",
-    "rbxassetid://86510482379594",
-    "rbxassetid://84895799077246",
-    "rbxassetid://133990700986998",
-    "rbxassetid://129585227912060"
-}
+local m1AnimId = "rbxassetid://88258635004597"
+local blockedAnimId = "rbxassetid://80277760801310"
 
 local idleAnim = Instance.new("Animation")
 idleAnim.AnimationId = idleAnimId
-local walkAnim = Instance.new("Animation")
+local walkAnim = Instance.new("Animation") 
 walkAnim.AnimationId = walkAnimId
 local runAnim = Instance.new("Animation")
 runAnim.AnimationId = runAnimId
-
-local m1Tracks = {}
-for i, animId in ipairs(m1AnimIds) do
-    local anim = Instance.new("Animation")
-    anim.AnimationId = animId
-    m1Tracks[i] = humanoid:LoadAnimation(anim)
-end
+local m1Anim = Instance.new("Animation")
+m1Anim.AnimationId = m1AnimId
 
 local idleTrack = humanoid:LoadAnimation(idleAnim)
-local walkTrack = humanoid:LoadAnimation(walkAnim)
+local walkTrack = humanoid:LoadAnimation(walkAnim) 
 local runTrack = humanoid:LoadAnimation(runAnim)
+local m1Track = humanoid:LoadAnimation(m1Anim)
 
 local isMoving = false
 local isRunning = false
 local canAttack = true
-local currentM1Index = 1
-local cooldown = 1
+local cooldown = 2
+
+local function blockUnwantedAnimations(animator)
+    animator.AnimationPlayed:Connect(function(animationTrack)
+        if animationTrack.Animation.AnimationId == blockedAnimId then
+            animationTrack:Stop()
+        end
+    end)
+end
+
+local animator = humanoid:FindFirstChildOfClass("Animator")
+if animator then
+    blockUnwantedAnimations(animator)
+else
+    humanoid.ChildAdded:Connect(function(child)
+        if child:IsA("Animator") then
+            blockUnwantedAnimations(child)
+        end
+    end)
+end
 
 local function updateAnimations()
     if isMoving then
         if isRunning then
-            if runTrack and not runTrack.IsPlaying then
-                if idleTrack then idleTrack:Stop() end
-                if walkTrack then walkTrack:Stop() end
+            if not runTrack.IsPlaying then
+                idleTrack:Stop()
+                walkTrack:Stop()
                 runTrack:Play()
             end
         else
-            if walkTrack and not walkTrack.IsPlaying then
-                if idleTrack then idleTrack:Stop() end
-                if runTrack then runTrack:Stop() end
+            if not walkTrack.IsPlaying then
+                idleTrack:Stop()
+                runTrack:Stop()
                 walkTrack:Play()
             end
         end
     else
-        if idleTrack and not idleTrack.IsPlaying then
-            if walkTrack then walkTrack:Stop() end
-            if runTrack then runTrack:Stop() end
+        if not idleTrack.IsPlaying then
+            walkTrack:Stop()
+            runTrack:Stop()
             idleTrack:Play()
         end
     end
@@ -65,35 +83,26 @@ end
 local function onM1Click()
     if canAttack then
         canAttack = false
-        local currentTrack = m1Tracks[currentM1Index]
-        if currentTrack then
-            currentTrack:Play()
-            if idleTrack then idleTrack:Stop() end
-            if walkTrack then walkTrack:Stop() end
-            if runTrack then runTrack:Stop() end
-        end
-        currentM1Index = currentM1Index + 1
-        if currentM1Index > #m1AnimIds then
-            currentM1Index = 1
-        end
+        m1Track:Play()
+        idleTrack:Stop()
+        walkTrack:Stop()
+        runTrack:Stop()
         task.wait(cooldown)
         canAttack = true
     end
 end
 
 game:GetService("RunService").Heartbeat:Connect(function()
-    local moveDirection = humanoid.MoveDirection
-    isMoving = moveDirection.Magnitude > 0
+    isMoving = humanoid.MoveDirection.Magnitude > 0
     isRunning = humanoid.WalkSpeed > 16
     updateAnimations()
 end)
 
-local userInputService = game:GetService("UserInputService")
-userInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.UserInputType == Enum.UserInputType.MouseButton1 then
         onM1Click()
     end
 end)
 
+humanoid.WalkSpeed = 16
 updateAnimations()
