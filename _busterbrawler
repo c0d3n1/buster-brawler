@@ -16,7 +16,7 @@ local idleAnimId = "rbxassetid://96173779255396"
 local walkAnimId = "rbxassetid://96194626828153"
 local runAnimId = "rbxassetid://96194626828153"
 local m1AnimId = "rbxassetid://88258635004597"
-local blockedAnimId = "rbxassetid://80277760801310"
+local blockedAnimId = "rbxassetid://80277760801310" -- Edit this to whatever yu want this is Mafioso's M1 so it doesnt override with the other animations m1 and stuff
 
 local idleAnim = Instance.new("Animation")
 idleAnim.AnimationId = idleAnimId
